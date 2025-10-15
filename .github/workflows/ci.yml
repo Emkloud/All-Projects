@@ -28,9 +28,10 @@ jobs:
           terraform_version: 1.1.9
 
       - name: Configure AWS credentials (OIDC)
+        if: ${{ secrets.AWS_ROLE_TO_ASSUME != '' }}
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          aws-region: ${{ secrets.AWS_REGION }}
+          aws-region: ${{ secrets.AWS_REGION != '' && secrets.AWS_REGION || 'us-east-1' }}
           role-to-assume: ${{ secrets.AWS_ROLE_TO_ASSUME }}
 
       - name: Terraform fmt
@@ -58,17 +59,23 @@ jobs:
           soft_fail: false
 
       - name: Terraform plan
+        if: ${{ secrets.AWS_ROLE_TO_ASSUME != '' }}
         id: plan
         env:
-          TF_VAR_region: ${{ secrets.AWS_REGION }}
+          TF_VAR_region: ${{ secrets.AWS_REGION != '' && secrets.AWS_REGION || 'us-east-1' }}
           TF_VAR_project_name: tic-tac-toe
           TF_VAR_profile: ""
         run: |
           terraform plan -no-color -input=false -out=tfplan
           terraform show -no-color tfplan > plan.txt
 
+      - name: Skip plan (no AWS_ROLE_TO_ASSUME secret set)
+        if: ${{ secrets.AWS_ROLE_TO_ASSUME == '' }}
+        run: |
+          echo "Skipping Terraform plan because AWS_ROLE_TO_ASSUME is not set. Static checks (fmt/validate/tflint/tfsec) completed."
+
       - name: Upload plan output
-        if: always()
+        if: ${{ always() && secrets.AWS_ROLE_TO_ASSUME != '' }}
         uses: actions/upload-artifact@v4
         with:
           name: terraform-plan-output
@@ -78,7 +85,7 @@ jobs:
           if-no-files-found: ignore
 
       - name: Comment plan to PR
-        if: always()
+        if: ${{ always() && secrets.AWS_ROLE_TO_ASSUME != '' }}
         uses: actions/github-script@v7
         with:
           script: |

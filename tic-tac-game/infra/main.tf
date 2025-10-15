@@ -1,47 +1,3 @@
-terraform {
-  required_version = ">= 1.1.0"
-  required_providers {
-    aws = {
-      source  = "hashicorp/aws"
-      version = "~> 4.67"
-    }
-  }
-}
-
-provider "aws" {
-  region  = var.region
-  profile = var.profile
-}
-
-locals {
-  name   = var.project_name
-  tags = {
-    Project = var.project_name
-    Managed = "terraform"
-  }
-}
-
-# Discover latest Amazon Linux 2023 AMI for the region
-data "aws_ami" "al2023" {
-  most_recent = true
-  owners      = ["137112412989"] # Amazon
-
-  filter {
-    name   = "name"
-    values = ["al2023-ami-*-x86_64"]
-  }
-
-  filter {
-    name   = "architecture"
-    values = ["x86_64"]
-  }
-}
-
-# Get two available AZs
-data "aws_availability_zones" "available" {
-  state = "available"
-}
-
 # -----------------
 # Networking (simple, cost-aware)
 # - Public subnets for ALB and EC2
@@ -152,16 +108,7 @@ resource "aws_iam_role" "ssm_role" {
   assume_role_policy = data.aws_iam_policy_document.ec2_assume_role.json
   tags               = local.tags
 }
-
-data "aws_iam_policy_document" "ec2_assume_role" {
-  statement {
-    actions = ["sts:AssumeRole"]
-    principals {
-      type        = "Service"
-      identifiers = ["ec2.amazonaws.com"]
-    }
-  }
-}
+## IAM assume role policy document moved to data.tf
 
 resource "aws_iam_role_policy_attachment" "ssm_core" {
   role       = aws_iam_role.ssm_role.name

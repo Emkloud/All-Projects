@@ -1,44 +1,3 @@
-terraform {
-  required_version = ">= 1.1.0"
-  required_providers {
-    aws = {
-      source  = "hashicorp/aws"
-      version = "~> 4.67"
-    }
-  }
-}
-
-provider "aws" {
-  region  = var.region
-  profile = var.profile
-}
-
-locals {
-  name = var.project_name
-  tags = {
-    Project = var.project_name
-    Managed = "terraform"
-  }
-}
-
-# AMI: Amazon Linux 2023 x86_64
-data "aws_ami" "al2023" {
-  most_recent = true
-  owners      = ["137112412989"]
-  filter {
-    name   = "name"
-    values = ["al2023-ami-*-x86_64"]
-  }
-  filter {
-    name   = "architecture"
-    values = ["x86_64"]
-  }
-}
-
-data "aws_availability_zones" "available" {
-  state = "available"
-}
-
 # Networking
 resource "aws_vpc" "this" {
   cidr_block           = var.vpc_cidr
@@ -125,16 +84,6 @@ resource "aws_iam_role" "ssm_role" {
   name               = "${local.name}-ec2-ssm-role"
   assume_role_policy = data.aws_iam_policy_document.ec2_assume.json
   tags               = local.tags
-}
-
-data "aws_iam_policy_document" "ec2_assume" {
-  statement {
-    actions = ["sts:AssumeRole"]
-    principals {
-      type        = "Service"
-      identifiers = ["ec2.amazonaws.com"]
-    }
-  }
 }
 
 resource "aws_iam_role_policy_attachment" "ssm_core" {

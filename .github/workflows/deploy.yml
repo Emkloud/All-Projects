@@ -31,7 +31,7 @@ jobs:
       - name: Configure AWS credentials (OIDC)
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          aws-region: ${{ secrets.AWS_REGION }}
+          aws-region: ${{ secrets.AWS_REGION != '' && secrets.AWS_REGION || 'us-east-1' }}
           role-to-assume: ${{ secrets.AWS_ROLE_TO_ASSUME }}
 
       - name: Terraform init
@@ -40,7 +40,7 @@ jobs:
       - name: Terraform plan
         run: |
           terraform plan -input=false -out=tfplan \
-            -var "region=${{ secrets.AWS_REGION }}" \
+            -var "region=${{ secrets.AWS_REGION != '' && secrets.AWS_REGION || 'us-east-1' }}" \
             -var "project_name=tic-tac-toe" \
             -var "profile="
           terraform show -no-color tfplan > plan.txt
